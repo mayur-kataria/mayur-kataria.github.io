@@ -1,0 +1,24 @@
+{
+  "name": "AegisCipher Offline Local Encryptor",
+  "short_name": "AegisCipher",
+  "description": "Zero Network. Zero Logs. Purely local offline password encryptor and vault.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0813",
+  "theme-color": "#0a0813",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
