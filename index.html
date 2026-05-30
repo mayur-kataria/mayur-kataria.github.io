@@ -194,16 +194,20 @@
         <section class="result-box" id="result-box" aria-live="polite">
             <div class="result-header">
                 <span class="result-title" id="result-title">Result Payload</span>
-                <div class="result-actions">
-                    <button class="icon-btn" id="btn-copy-result" title="Copy to clipboard">
-                        <svg><use href="#icon-copy"/></svg>
-                    </button>
-                    <button class="icon-btn" id="btn-clear-result" title="Clear result and clipboard" style="color:var(--color-error);">
-                        <svg><use href="#icon-trash"/></svg>
-                    </button>
-                </div>
             </div>
-            <div class="result-content" id="result-content"></div>
+            <div class="result-content-wrapper">
+                <div class="result-content" id="result-content"></div>
+            </div>
+            <div class="result-action-bar">
+                <button class="action-chip btn-copy" id="btn-copy-result" type="button">
+                    <svg><use href="#icon-copy"/></svg>
+                    <span>Copy to Clipboard</span>
+                </button>
+                <button class="action-chip btn-clear" id="btn-clear-result" type="button">
+                    <svg><use href="#icon-trash"/></svg>
+                    <span>Wipe Session</span>
+                </button>
+            </div>
         </section>
 
         <!-- Interactive Safety Disclaimer -->
