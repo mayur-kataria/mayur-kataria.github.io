@@ -7,8 +7,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     const tabEncrypt = document.getElementById("tab-encrypt");
     const tabDecrypt = document.getElementById("tab-decrypt");
+    const tabVault = document.getElementById("tab-vault");
     const panelEncrypt = document.getElementById("panel-encrypt");
     const panelDecrypt = document.getElementById("panel-decrypt");
+    const panelVault = document.getElementById("panel-vault");
 
     const encryptInput = document.getElementById("encrypt-input");
     const encryptKey = document.getElementById("encrypt-key");
@@ -43,25 +45,64 @@ document.addEventListener("DOMContentLoaded", () => {
     const toastIconCheck = document.getElementById("toast-icon-check");
     const toastIconError = document.getElementById("toast-icon-error");
 
+    // --- Vault DOM Elements ---
+    const vaultLockedView = document.getElementById("vault-locked-view");
+    const vaultUnlockedView = document.getElementById("vault-unlocked-view");
+    const vaultDropzone = document.getElementById("vault-dropzone");
+    const vaultFileInput = document.getElementById("vault-file-input");
+    const vaultFileStatus = document.getElementById("vault-file-status");
+    const vaultFileName = document.getElementById("vault-file-name");
+    const btnRemoveVaultFile = document.getElementById("btn-remove-vault-file");
+    const vaultMasterKeyInput = document.getElementById("vault-master-key");
+    
+    const btnUnlockVault = document.getElementById("btn-unlock-vault");
+    const btnCreateVault = document.getElementById("btn-create-vault");
+    const vaultSearch = document.getElementById("vault-search");
+    const vaultAccountsContainer = document.getElementById("vault-accounts-container");
+    const vaultEmptyState = document.getElementById("vault-empty-state");
+    const vaultTimer = document.getElementById("vault-timer");
+
+    const vaultAddAccount = document.getElementById("vault-add-account");
+    const vaultAddPassword = document.getElementById("vault-add-password");
+    const btnVaultGenerate = document.getElementById("btn-vault-generate");
+    const btnVaultAdd = document.getElementById("btn-vault-add");
+    const btnVaultDownload = document.getElementById("btn-vault-download");
+    const btnVaultLock = document.getElementById("btn-vault-lock");
+
+    // --- State Variables ---
     let clipboardClearTimeout = null;
+    let loadedVaultString = "";
+    let vaultMasterKey = "";
+    let vaultMemoryMap = {}; // Purely in-memory RAM dictionary
+    let isVaultUnlocked = false;
+    let autoLockInterval = null;
+    let autoLockSecondsLeft = 300; // 5 minutes count
 
     // --- Tab Switching Logic ---
-    const switchTab = (activeTab, inactiveTab, showPanel, hidePanel) => {
+    const switchTab = (activeTab, showPanel, inactiveTabs, hidePanels) => {
         activeTab.classList.add("active");
         activeTab.setAttribute("aria-selected", "true");
-        inactiveTab.classList.remove("active");
-        inactiveTab.setAttribute("aria-selected", "false");
+        inactiveTabs.forEach(t => {
+            t.classList.remove("active");
+            t.setAttribute("aria-selected", "false");
+        });
         showPanel.style.display = "block";
-        hidePanel.style.display = "none";
+        hidePanels.forEach(p => {
+            p.style.display = "none";
+        });
         hideResultBox();
     };
 
     tabEncrypt.addEventListener("click", () => {
-        switchTab(tabEncrypt, tabDecrypt, panelEncrypt, panelDecrypt);
+        switchTab(tabEncrypt, panelEncrypt, [tabDecrypt, tabVault], [panelDecrypt, panelVault]);
     });
 
     tabDecrypt.addEventListener("click", () => {
-        switchTab(tabDecrypt, tabEncrypt, panelDecrypt, panelEncrypt);
+        switchTab(tabDecrypt, panelDecrypt, [tabEncrypt, tabVault], [panelEncrypt, panelVault]);
+    });
+
+    tabVault.addEventListener("click", () => {
+        switchTab(tabVault, panelVault, [tabEncrypt, tabDecrypt], [panelEncrypt, panelDecrypt]);
     });
 
     // --- Password Visibility Toggle ---
@@ -338,5 +379,407 @@ document.addEventListener("DOMContentLoaded", () => {
             btnDecrypt.disabled = false;
             btnDecrypt.innerHTML = `<svg><use href="#icon-unlock"/></svg> Decrypt Locally`;
         }
+    });
+
+    // ==============================================================================
+    // Vault Dashboard Controller
+    // ==============================================================================
+
+    // --- File Drag-and-Drop / Selector Hooks ---
+    vaultDropzone.addEventListener("click", () => {
+        vaultFileInput.click();
+    });
+
+    vaultFileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+            readVaultFile(e.target.files[0]);
+        }
+    });
+
+    vaultDropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        vaultDropzone.classList.add("hover");
+    });
+
+    vaultDropzone.addEventListener("dragleave", () => {
+        vaultDropzone.classList.remove("hover");
+    });
+
+    vaultDropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        vaultDropzone.classList.remove("hover");
+        if (e.dataTransfer.files.length > 0) {
+            readVaultFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    const readVaultFile = (file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            loadedVaultString = reader.result.trim();
+            vaultFileName.textContent = file.name;
+            vaultDropzone.style.display = "none";
+            vaultFileStatus.style.display = "flex";
+            showToast("Vault file loaded successfully!", false);
+        };
+        reader.onerror = () => {
+            showToast("Error reading vault file.", true);
+        };
+        reader.readAsText(file);
+    };
+
+    btnRemoveVaultFile.addEventListener("click", () => {
+        loadedVaultString = "";
+        vaultFileInput.value = "";
+        vaultFileStatus.style.display = "none";
+        vaultDropzone.style.display = "flex";
+        showToast("Vault file removed.", false);
+    });
+
+    // --- Unlock & Create Empty Vault ---
+    btnUnlockVault.addEventListener("click", async () => {
+        if (!loadedVaultString) {
+            showToast("Please drag & drop your vault.aegis file first.", true);
+            return;
+        }
+        const masterKey = vaultMasterKeyInput.value;
+        if (!masterKey) {
+            showToast("Please enter your Master Passphrase.", true);
+            return;
+        }
+
+        try {
+            btnUnlockVault.disabled = true;
+            btnUnlockVault.textContent = "Decrypting Vault...";
+
+            const decryptedJson = await AegisCrypto.decrypt(loadedVaultString, masterKey);
+            vaultMemoryMap = JSON.parse(decryptedJson);
+            
+            // Set session states
+            vaultMasterKey = masterKey;
+            isVaultUnlocked = true;
+            vaultMasterKeyInput.value = ""; // Purge from raw input element immediately
+
+            // Toggle locked views
+            vaultLockedView.style.display = "none";
+            vaultUnlockedView.style.display = "block";
+
+            renderVaultGrid();
+            startAutoLockTimer();
+            showToast("Vault unlocked successfully!", false);
+        } catch (err) {
+            showToast("Invalid Master Passphrase or corrupted file.", true);
+        } finally {
+            btnUnlockVault.disabled = false;
+            btnUnlockVault.innerHTML = `<svg width="18" height="18"><use href="#icon-unlock"/></svg> Unlock Vault`;
+        }
+    });
+
+    btnCreateVault.addEventListener("click", () => {
+        const masterKey = vaultMasterKeyInput.value;
+        if (!masterKey) {
+            showToast("Please enter a Master Passphrase in the box first.", true);
+            return;
+        }
+
+        // Initialize brand new empty vault in RAM
+        vaultMemoryMap = {};
+        vaultMasterKey = masterKey;
+        isVaultUnlocked = true;
+        vaultMasterKeyInput.value = "";
+
+        vaultLockedView.style.display = "none";
+        vaultUnlockedView.style.display = "block";
+
+        renderVaultGrid();
+        startAutoLockTimer();
+        showToast("New volatile vault created successfully!", false);
+    });
+
+    // --- Render Vault Grid ---
+    const renderVaultGrid = () => {
+        vaultAccountsContainer.innerHTML = "";
+        const query = vaultSearch.value.trim().toLowerCase();
+        
+        // Filter account names
+        const accounts = Object.keys(vaultMemoryMap).filter(acc => 
+            acc.toLowerCase().includes(query)
+        ).sort();
+
+        if (accounts.length === 0) {
+            vaultEmptyState.style.display = "flex";
+            vaultAccountsContainer.style.display = "none";
+            return;
+        }
+
+        vaultEmptyState.style.display = "none";
+        vaultAccountsContainer.style.display = "flex";
+
+        accounts.forEach(acc => {
+            const card = document.createElement("div");
+            card.className = "vault-account-card";
+
+            // Details
+            const info = document.createElement("div");
+            info.className = "vault-card-info";
+            
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "vault-account-name";
+            nameSpan.textContent = acc;
+
+            const passSpan = document.createElement("span");
+            passSpan.className = "vault-account-password";
+            passSpan.textContent = "••••••••••••";
+
+            info.appendChild(nameSpan);
+            info.appendChild(passSpan);
+
+            // Actions Container
+            const actions = document.createElement("div");
+            actions.className = "vault-card-actions";
+
+            // Reveal button
+            const btnReveal = document.createElement("button");
+            btnReveal.className = "icon-btn";
+            btnReveal.innerHTML = `<svg width="16" height="16"><use href="#icon-eye"/></svg>`;
+            btnReveal.title = "Reveal Password";
+            let isPasswordRevealed = false;
+
+            btnReveal.addEventListener("click", async () => {
+                try {
+                    const useElement = btnReveal.querySelector("use");
+                    if (!isPasswordRevealed) {
+                        btnReveal.disabled = true;
+                        // Decrypt on-demand from RAM
+                        const plain = await AegisCrypto.decrypt(vaultMemoryMap[acc], vaultMasterKey);
+                        passSpan.textContent = plain;
+                        passSpan.classList.add("revealed");
+                        useElement.setAttribute("href", "#icon-eye-off");
+                        isPasswordRevealed = true;
+                    } else {
+                        passSpan.textContent = "••••••••••••";
+                        passSpan.classList.remove("revealed");
+                        useElement.setAttribute("href", "#icon-eye");
+                        isPasswordRevealed = false;
+                    }
+                } catch (err) {
+                    showToast("Decryption error on this card.", true);
+                } finally {
+                    btnReveal.disabled = false;
+                }
+            });
+
+            // Copy button
+            const btnCopy = document.createElement("button");
+            btnCopy.className = "icon-btn";
+            btnCopy.innerHTML = `<svg width="16" height="16"><use href="#icon-copy"/></svg>`;
+            btnCopy.title = "Copy Password";
+
+            btnCopy.addEventListener("click", async () => {
+                try {
+                    btnCopy.disabled = true;
+                    const plain = await AegisCrypto.decrypt(vaultMemoryMap[acc], vaultMasterKey);
+                    
+                    navigator.clipboard.writeText(plain).then(() => {
+                        showToast(`Copied ${acc} password!`, false);
+
+                        if (clipboardClearTimeout) {
+                            clearTimeout(clipboardClearTimeout);
+                        }
+
+                        clipboardClearTimeout = setTimeout(() => {
+                            navigator.clipboard.readText().then(curr => {
+                                if (curr === plain) {
+                                    navigator.clipboard.writeText("").then(() => {
+                                        showToast("Clipboard cleared.", false);
+                                    });
+                                }
+                            }).catch(() => {
+                                navigator.clipboard.writeText("");
+                            });
+                        }, 30000);
+                    });
+                } catch (err) {
+                    showToast("Error decrypting password for copy.", true);
+                } finally {
+                    btnCopy.disabled = false;
+                }
+            });
+
+            // Delete button
+            const btnDelete = document.createElement("button");
+            btnDelete.className = "icon-btn";
+            btnDelete.innerHTML = `<svg width="16" height="16"><use href="#icon-trash"/></svg>`;
+            btnDelete.title = "Delete Credential";
+            btnDelete.style.color = "var(--color-error)";
+
+            btnDelete.addEventListener("click", () => {
+                if (confirm(`Are you sure you want to delete ${acc} from this vault session? (Remember to export to save changes!)`)) {
+                    delete vaultMemoryMap[acc];
+                    renderVaultGrid();
+                    showToast(`${acc} removed from session map.`, false);
+                }
+            });
+
+            actions.appendChild(btnReveal);
+            actions.appendChild(btnCopy);
+            actions.appendChild(btnDelete);
+
+            card.appendChild(info);
+            card.appendChild(actions);
+
+            vaultAccountsContainer.appendChild(card);
+        });
+    };
+
+    // Live search filter
+    vaultSearch.addEventListener("input", renderVaultGrid);
+
+    // --- Generate & Add Credential ---
+    btnVaultGenerate.addEventListener("click", () => {
+        vaultAddPassword.value = generateSecurePassword();
+        showToast("Secure password generated for vault form!", false);
+    });
+
+    btnVaultAdd.addEventListener("click", async () => {
+        const account = vaultAddAccount.value.trim();
+        const password = vaultAddPassword.value.trim();
+
+        if (!account) {
+            showToast("Please enter an Account/Service name.", true);
+            return;
+        }
+        if (!password) {
+            showToast("Please enter or generate a password.", true);
+            return;
+        }
+        if (vaultMemoryMap[account]) {
+            showToast(`Account "${account}" already exists in vault.`, true);
+            return;
+        }
+
+        try {
+            btnVaultAdd.disabled = true;
+            btnVaultAdd.textContent = "Encrypting and Adding...";
+
+            // Double envelope: Encrypt credential individually
+            const cipher = await AegisCrypto.encrypt(password, vaultMasterKey);
+            
+            // Inject to RAM map
+            vaultMemoryMap[account] = cipher;
+            
+            // Clear inputs
+            vaultAddAccount.value = "";
+            vaultAddPassword.value = "";
+
+            renderVaultGrid();
+            showToast(`"${account}" added to memory map!`, false);
+        } catch (err) {
+            showToast("Failed to encrypt and add credential.", true);
+        } finally {
+            btnVaultAdd.disabled = false;
+            btnVaultAdd.textContent = "Add to Memory Map";
+        }
+    });
+
+    // --- Export Vault & Lock Session ---
+    btnVaultDownload.addEventListener("click", async () => {
+        if (Object.keys(vaultMemoryMap).length === 0) {
+            showToast("Vault is empty. Add credentials before exporting.", true);
+            return;
+        }
+
+        try {
+            btnVaultDownload.disabled = true;
+            btnVaultDownload.textContent = "Exporting Vault...";
+
+            const serialized = JSON.stringify(vaultMemoryMap);
+            const masterCipher = await AegisCrypto.encrypt(serialized, vaultMasterKey);
+
+            // Blob trigger download
+            const blob = new Blob([masterCipher], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "vault.aegis";
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast("Encrypted vault.aegis downloaded successfully!", false);
+        } catch (err) {
+            showToast("Failed to export encrypted vault.", true);
+        } finally {
+            btnVaultDownload.disabled = false;
+            btnVaultDownload.innerHTML = `<svg width="16" height="16"><use href="#icon-copy"/></svg> <span>Export vault.aegis</span>`;
+        }
+    });
+
+    const lockVaultSession = () => {
+        // Complete memory purge
+        vaultMemoryMap = {};
+        vaultMasterKey = "";
+        loadedVaultString = "";
+        isVaultUnlocked = false;
+
+        // Clear timer interval
+        if (autoLockInterval) {
+            clearInterval(autoLockInterval);
+            autoLockInterval = null;
+        }
+
+        // Reset inputs
+        vaultMasterKeyInput.value = "";
+        vaultFileInput.value = "";
+        vaultSearch.value = "";
+        vaultAddAccount.value = "";
+        vaultAddPassword.value = "";
+
+        // Reset views
+        vaultFileStatus.style.display = "none";
+        vaultDropzone.style.display = "flex";
+        vaultLockedView.style.display = "block";
+        vaultUnlockedView.style.display = "none";
+
+        showToast("Vault locked & session purged from RAM.", false);
+    };
+
+    btnVaultLock.addEventListener("click", lockVaultSession);
+
+    // --- Inactivity Auto-Lock Inactivity Timer ---
+    const startAutoLockTimer = () => {
+        if (autoLockInterval) {
+            clearInterval(autoLockInterval);
+        }
+
+        autoLockSecondsLeft = 300; // Reset to 5 minutes
+        
+        autoLockInterval = setInterval(() => {
+            if (!isVaultUnlocked) {
+                clearInterval(autoLockInterval);
+                return;
+            }
+
+            autoLockSecondsLeft--;
+            const mins = Math.floor(autoLockSecondsLeft / 60);
+            const secs = autoLockSecondsLeft % 60;
+            vaultTimer.textContent = `Auto-locks in ${mins}:${secs.toString().padStart(2, "0")}`;
+
+            if (autoLockSecondsLeft <= 0) {
+                lockVaultSession();
+                showToast("Vault automatically locked due to 5-minute inactivity.", true);
+            }
+        }, 1000);
+    };
+
+    // User activity monitor to reset timer
+    const resetActivityTimer = () => {
+        if (isVaultUnlocked) {
+            autoLockSecondsLeft = 300;
+        }
+    };
+
+    const activityEvents = ["mousemove", "mousedown", "keypress", "touchstart", "scroll"];
+    activityEvents.forEach(evt => {
+        window.addEventListener(evt, resetActivityTimer, { passive: true });
     });
 });

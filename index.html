@@ -80,6 +80,10 @@
                 <svg><use href="#icon-unlock"/></svg>
                 Decrypt
             </button>
+            <button id="tab-vault" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-vault">
+                <svg><use href="#icon-shield"/></svg>
+                Vault
+            </button>
         </nav>
 
         <!-- Dynamic Panels -->
@@ -189,6 +193,122 @@
                 <svg><use href="#icon-unlock"/></svg>
                 Decrypt Locally
             </button>
+        </section>
+
+        <!-- Vault Dashboard Panel (Hidden initially) -->
+        <section id="panel-vault" role="tabpanel" aria-labelledby="tab-vault" style="display: none;">
+            <!-- STATE 1: Vault is Locked -->
+            <div id="vault-locked-view">
+                <!-- File Dropzone -->
+                <div class="form-group">
+                    <label>Load Encrypted Vault File</label>
+                    <div id="vault-dropzone" class="vault-dropzone">
+                        <svg class="dropzone-icon" width="36" height="36"><use href="#icon-shield"/></svg>
+                        <p class="dropzone-text">Drag & drop your <strong>vault.aegis</strong> file here</p>
+                        <span class="dropzone-subtext">or click to browse your folders</span>
+                        <input type="file" id="vault-file-input" accept=".aegis" style="display: none;">
+                    </div>
+                    <div id="vault-file-status" class="vault-file-status" style="display:none;">
+                        <span class="status-badge">Loaded</span>
+                        <span id="vault-file-name" class="file-name">vault.aegis</span>
+                        <button id="btn-remove-vault-file" class="label-action" style="color:var(--color-error); margin-left: auto;" type="button">Remove</button>
+                    </div>
+                </div>
+
+                <!-- Master Key Input -->
+                <div class="form-group">
+                    <label for="vault-master-key">Vault Master Passphrase</label>
+                    <div class="input-wrapper">
+                        <input id="vault-master-key" type="password" class="input-control" placeholder="Enter your Master Passphrase..." autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
+                        <button class="input-icon-btn toggle-password-visibility" data-target="vault-master-key" type="button">
+                            <svg width="16" height="16"><use href="#icon-eye"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display:flex; gap:12px; margin-top:8px;">
+                    <button id="btn-unlock-vault" class="action-btn" type="button" style="flex:2;">
+                        <svg width="18" height="18"><use href="#icon-unlock"/></svg>
+                        Unlock Vault
+                    </button>
+                    <button id="btn-create-vault" class="action-btn danger-btn" type="button" style="flex:1; background:rgba(255,255,255,0.05); border:1px dashed var(--border-glass); color:var(--text-secondary); box-shadow:none;">
+                        Create New
+                    </button>
+                </div>
+            </div>
+
+            <!-- STATE 2: Vault is Unlocked (Hidden initially) -->
+            <div id="vault-unlocked-view" style="display: none;">
+                <!-- Vault Header -->
+                <div class="vault-status-header">
+                    <span class="status-dot success"></span>
+                    <span class="status-label">Vault Decrypted in RAM</span>
+                    <span class="status-timer" id="vault-timer">Auto-locks in 5:00</span>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="form-group" style="margin-top:16px;">
+                    <div class="input-wrapper">
+                        <input id="vault-search" type="text" class="input-control" placeholder="Search accounts (e.g. GitHub, Google)..." style="padding-left:14px;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- Accounts Grid -->
+                <div id="vault-accounts-container" class="vault-accounts-grid">
+                    <!-- Dynamic Account Cards will be rendered here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="vault-empty-state" class="vault-empty-state" style="display:none;">
+                    <p>No credentials stored in this vault.</p>
+                    <span>Use the form below to add your first account.</span>
+                </div>
+
+                <!-- Add Credentials Panel -->
+                <div class="vault-add-section">
+                    <h3 class="vault-add-title">Add Secure Credential</h3>
+                    
+                    <div class="options-grid" style="grid-template-columns: 1fr; background:rgba(0,0,0,0.1); border-color:rgba(255,255,255,0.02); padding:16px 12px;">
+                        <!-- Account Name -->
+                        <div class="form-group">
+                            <label for="vault-add-account" style="font-size:10px;">Account / Service Name</label>
+                            <input id="vault-add-account" type="text" class="input-control" placeholder="e.g. Google, GitHub, Bank..." style="padding: 10px 12px; font-size:13px; border-radius:8px;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group" style="margin-bottom:6px;">
+                            <div class="label-container">
+                                <label for="vault-add-password" style="font-size:10px;">Password / Secret Value</label>
+                                <button class="label-action" id="btn-vault-generate" type="button" style="font-size:10px;">Generate Strong</button>
+                            </div>
+                            <div class="input-wrapper">
+                                <input id="vault-add-password" type="password" class="input-control" placeholder="Enter password or select generate..." style="padding: 10px 40px 10px 12px; font-size:13px; border-radius:8px;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
+                                <button class="input-icon-btn toggle-password-visibility" data-target="vault-add-password" style="right:8px; padding:2px;" type="button">
+                                    <svg width="16" height="16"><use href="#icon-eye"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Add Button -->
+                        <button id="btn-vault-add" class="action-btn" type="button" style="padding:10px; font-size:13px; border-radius:8px; background:linear-gradient(135deg, #a78bfa, #8b5cf6); margin-top:4px; box-shadow:none;">
+                            Add to Memory Map
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vault Action Bar -->
+                <div class="result-action-bar" style="margin-top:20px;">
+                    <button class="action-chip btn-copy" id="btn-vault-download" type="button">
+                        <svg width="16" height="16"><use href="#icon-copy"/></svg>
+                        <span>Export vault.aegis</span>
+                    </button>
+                    <button class="action-chip btn-clear" id="btn-vault-lock" type="button">
+                        <svg width="16" height="16"><use href="#icon-trash"/></svg>
+                        <span>Lock & Purge RAM</span>
+                    </button>
+                </div>
+            </div>
         </section>
 
         <!-- Output Result Panel -->
