@@ -4,7 +4,7 @@
  * enabling 100% offline startup and zero network reliance.
  */
 
-const CACHE_NAME = "aegiscipher-v4";
+const CACHE_NAME = "aegiscipher-v5";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

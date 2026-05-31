@@ -158,12 +158,21 @@ class AegisCrypto {
         try {
             // Split package
             const parts = payload.trim().split(":");
-            if (parts.length !== 7 || parts[0] !== "AEGIS1") {
-                throw new Error("Invalid or corrupted cipher format. Ensure payload starts with 'AEGIS1:'");
+            if (parts.length !== 7) {
+                throw new Error("Invalid or corrupted cipher format. Ensure payload has 7 colon-separated sections.");
             }
 
-            const [_, algo, hashAlgo, iterationsStr, saltB64, ivB64, ciphertextPayload] = parts;
+            // Make metadata parts case-insensitive by standardizing to uppercase
+            parts[0] = parts[0].toUpperCase(); // "aegis1" -> "AEGIS1"
+            parts[1] = parts[1].toUpperCase(); // "aes-gcm" -> "AES-GCM", "aes-cbc" -> "AES-CBC"
+            parts[2] = parts[2].toUpperCase(); // "sha-256" -> "SHA-256", "sha-512" -> "SHA-512"
+
+            const [prefix, algo, hashAlgo, iterationsStr, saltB64, ivB64, ciphertextPayload] = parts;
             const iterations = parseInt(iterationsStr, 10);
+
+            if (prefix !== "AEGIS1") {
+                throw new Error("Invalid or corrupted cipher format. Ensure payload starts with 'AEGIS1:'");
+            }
 
             if (algo !== "AES-GCM" && algo !== "AES-CBC") {
                 throw new Error(`Unsupported encryption algorithm: ${algo}`);
