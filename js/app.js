@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnEncrypt = document.getElementById("btn-encrypt");
     const btnDecrypt = document.getElementById("btn-decrypt");
     const btnGeneratePassword = document.getElementById("btn-generate-password");
+    const btnPasteCipher = document.getElementById("btn-paste-cipher");
     
     const advTriggerEncrypt = document.getElementById("adv-trigger-encrypt");
     const advContentEncrypt = document.getElementById("adv-content-encrypt");
@@ -287,6 +288,25 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             btnEncrypt.disabled = false;
             btnEncrypt.innerHTML = `<svg><use href="#icon-lock"/></svg> Encrypt Locally`;
+        }
+    });
+
+    // --- Paste Cipher Event ---
+    btnPasteCipher.addEventListener("click", async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                decryptInput.value = text.trim();
+                showToast("Ciphertext pasted successfully!", false);
+                
+                // Trigger auto-resize
+                decryptInput.style.height = "auto";
+                decryptInput.style.height = `${decryptInput.scrollHeight}px`;
+            } else {
+                showToast("Clipboard is empty.", true);
+            }
+        } catch (err) {
+            showToast("Clipboard read permission denied. Please paste manually.", true);
         }
     });
 
