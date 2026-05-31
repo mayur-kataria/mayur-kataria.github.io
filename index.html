@@ -91,7 +91,7 @@
                     <button class="label-action" id="btn-generate-password" type="button">Generate Password</button>
                 </div>
                 <div class="input-wrapper">
-                    <textarea id="encrypt-input" class="input-control" placeholder="Enter sensitive password or text here..."></textarea>
+                    <textarea id="encrypt-input" class="input-control" placeholder="Enter sensitive password or text here..." autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
                 </div>
             </div>
 
@@ -101,7 +101,7 @@
                     <label for="encrypt-key">Secret Key (Passphrase)</label>
                 </div>
                 <div class="input-wrapper">
-                    <input id="encrypt-key" type="password" class="input-control" placeholder="Enter your secret key...">
+                    <input id="encrypt-key" type="password" class="input-control" placeholder="Enter your secret key..." autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
                     <button class="input-icon-btn toggle-password-visibility" data-target="encrypt-key" type="button">
                         <svg><use href="#icon-eye"/></svg>
                     </button>
@@ -146,7 +146,7 @@
                     </div>
                     <div class="form-group" style="grid-column: span 2; margin-bottom:0;">
                         <label for="encrypt-salt" style="font-size:10px;">Custom Salt (Optional)</label>
-                        <input id="encrypt-salt" type="text" class="input-control" placeholder="Auto-generated if empty..." style="padding: 6px 10px; font-size:12px; border-radius:8px;">
+                        <input id="encrypt-salt" type="text" class="input-control" placeholder="Auto-generated if empty..." style="padding: 6px 10px; font-size:12px; border-radius:8px;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -166,7 +166,7 @@
                     <label for="decrypt-input">Ciphertext Payload</label>
                 </div>
                 <div class="input-wrapper">
-                    <textarea id="decrypt-input" class="input-control" placeholder="Paste the AEGIS1:... encrypted package here..."></textarea>
+                    <textarea id="decrypt-input" class="input-control" placeholder="Paste the AEGIS1:... encrypted package here..." autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
                 </div>
             </div>
 
@@ -176,7 +176,7 @@
                     <label for="decrypt-key">Secret Key (Passphrase)</label>
                 </div>
                 <div class="input-wrapper">
-                    <input id="decrypt-key" type="password" class="input-control" placeholder="Enter the secret key used to encrypt...">
+                    <input id="decrypt-key" type="password" class="input-control" placeholder="Enter the secret key used to encrypt..." autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
                     <button class="input-icon-btn toggle-password-visibility" data-target="decrypt-key" type="button">
                         <svg><use href="#icon-eye"/></svg>
                     </button>
